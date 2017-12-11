@@ -70,20 +70,24 @@ public class ServiceObserver extends AbstractFuture<CachedService> implements Ru
           try {
             while ( !latch.await( 1, TimeUnit.SECONDS ) ) {
               if ( !isRunning ) {
-                return rowMetaAndData.size() > index;
+                return true; //rowMetaAndData.size() > index;
               }
             }
-            return rowMetaAndData.size() > index;
+            return true; // rowMetaAndData.size() > index;
           } catch ( InterruptedException e ) {
-            return rowMetaAndData.size() > index;
+            return true; //rowMetaAndData.size() > index;
           }
         } else {
-          return rowMetaAndData.size() > index;
+          return true; //rowMetaAndData.size() > index;
         }
       }
 
       @Override public RowMetaAndData next() {
-        return rowMetaAndData.get( index++ );
+        if( index < 30 ) {
+          return rowMetaAndData.get( index++ );
+        } else {
+          return rowMetaAndData.get( 29 );
+        }
       }
     };
   }
@@ -110,6 +114,9 @@ public class ServiceObserver extends AbstractFuture<CachedService> implements Ru
           return;
         }
         rowMetaAndData.add( new RowMetaAndData( rowMeta, clonedRow ) );
+        if ( rowMetaAndData.size() > 30 ) {
+          rowMetaAndData.removeAll( rowMetaAndData.subList( 0, rowMetaAndData.size() - 30) );
+        }
         latch.countDown();
       }
     } );
