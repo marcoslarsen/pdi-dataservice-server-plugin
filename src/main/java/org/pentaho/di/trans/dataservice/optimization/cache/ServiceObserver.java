@@ -70,15 +70,15 @@ public class ServiceObserver extends AbstractFuture<CachedService> implements Ru
           try {
             while ( !latch.await( 1, TimeUnit.SECONDS ) ) {
               if ( !isRunning ) {
-                return true; //rowMetaAndData.size() > index;
+                return rowMetaAndData.size() > index;
               }
             }
-            return true; // rowMetaAndData.size() > index;
+            return rowMetaAndData.size() > index;
           } catch ( InterruptedException e ) {
-            return true; //rowMetaAndData.size() > index;
+            return rowMetaAndData.size() > index;
           }
         } else {
-          return true; //rowMetaAndData.size() > index;
+          return rowMetaAndData.size() > index;
         }
       }
 
