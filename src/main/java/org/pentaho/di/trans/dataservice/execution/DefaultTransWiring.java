@@ -70,7 +70,8 @@ public class DefaultTransWiring implements Runnable {
       }
     } );
 
-    dataServiceExecutor.getGenTrans()
+    // We want the serviceTrans to keep feeding the buffer even if the genTrans is stopped
+  /*  dataServiceExecutor.getGenTrans()
       .findRunThread( dataServiceExecutor.getResultStepName() )
       .addStepListener( new StepAdapter() {
         @Override public void stepFinished( Trans trans, StepMeta stepMeta, StepInterface step ) {
@@ -79,7 +80,7 @@ public class DefaultTransWiring implements Runnable {
             serviceTrans.stopAll();
           }
         }
-      } );
+      } ); */
   }
 
 }

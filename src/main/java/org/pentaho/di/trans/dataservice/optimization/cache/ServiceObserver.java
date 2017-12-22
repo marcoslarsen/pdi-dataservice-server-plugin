@@ -49,6 +49,7 @@ import static com.google.common.base.Predicates.instanceOf;
  */
 public class ServiceObserver extends AbstractFuture<CachedService> implements Runnable {
   private final DataServiceExecutor executor;
+  private int windowSize = 30;
 
   List<RowMetaAndData> rowMetaAndData = Lists.newArrayList();
   boolean isRunning = true;
@@ -70,23 +71,24 @@ public class ServiceObserver extends AbstractFuture<CachedService> implements Ru
           try {
             while ( !latch.await( 1, TimeUnit.SECONDS ) ) {
               if ( !isRunning ) {
-                return rowMetaAndData.size() > index;
+                return true;
               }
             }
-            return rowMetaAndData.size() > index;
+            return true;
           } catch ( InterruptedException e ) {
-            return rowMetaAndData.size() > index;
+            return true;
           }
         } else {
-          return rowMetaAndData.size() > index;
+          return true;
         }
       }
 
       @Override public RowMetaAndData next() {
-        if( index < 30 ) {
+        if( index < windowSize ) {
           return rowMetaAndData.get( index++ );
         } else {
-          return rowMetaAndData.get( 29 );
+          index = windowSize - 1;
+          return rowMetaAndData.get( index );
         }
       }
     };
@@ -114,8 +116,8 @@ public class ServiceObserver extends AbstractFuture<CachedService> implements Ru
           return;
         }
         rowMetaAndData.add( new RowMetaAndData( rowMeta, clonedRow ) );
-        if ( rowMetaAndData.size() > 30 ) {
-          rowMetaAndData.removeAll( rowMetaAndData.subList( 0, rowMetaAndData.size() - 30) );
+        if ( rowMetaAndData.size() > windowSize ) {
+          rowMetaAndData.removeAll( rowMetaAndData.subList( 0, rowMetaAndData.size() - windowSize ) );
         }
         latch.countDown();
       }

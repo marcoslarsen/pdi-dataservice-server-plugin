@@ -22,6 +22,10 @@
 
 package org.pentaho.di.trans.dataservice.execution;
 
+import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
+import org.pentaho.di.core.RowMetaAndData;
+import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleValueException;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -30,6 +34,7 @@ import org.pentaho.di.trans.RowProducer;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.step.RowAdapter;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -42,10 +47,101 @@ class DefaultTransWiringRowAdapter extends RowAdapter {
   private final Trans genTrans;
   private final RowProducer rowProducer;
 
+  private int windowSize = 30;
+  private List<RowMetaAndData> rowMetaAndData = Lists.newArrayList();
+  private boolean genTransBusy = false;
+
   public DefaultTransWiringRowAdapter( Trans serviceTrans, Trans genTrans, RowProducer rowProducer ) {
     this.serviceTrans = serviceTrans;
     this.genTrans = genTrans;
     this.rowProducer = rowProducer;
+  }
+
+  private synchronized void setGenTransBusy( boolean busy ) {
+    this.genTransBusy = busy;
+  }
+
+  /**
+   * Creates a new thread to process a window of data to the genTrans.
+   *
+   * @param List<RowMetaAndData> window - The window of rows to be written to the rowProducer.
+   */
+  public void writeRowsWindowToProducer( List<RowMetaAndData> window ) {
+    Thread thread = new Thread(){
+      public void run(){
+        if( startGenTrans() ) {
+          for (int i = 0; i < window.size(); i++) {
+            addRowToRowProducer( window.get( i ) );
+          }
+          rowProducer.finished();
+        }
+      }
+    };
+    thread.start();
+  }
+
+  /**
+   * Starts or Takes over the genTrans if not Started/Taken.
+   *
+   * @return True if the genTrans is started/taken, false otherwise.
+   */
+  private boolean startGenTrans() {
+    if ( !genTransBusy ) {
+      setGenTransBusy( true );
+      try {
+        if ( this.genTrans.isFinished() ) {
+          this.genTrans.startThreads();
+        }
+        return true;
+      } catch ( KettleException e ) {
+        setGenTransBusy( false );
+        throw Throwables.propagate( e );
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Adds a row to the genTrans rowProducer step.
+   *
+   * @param RowMetaAndData row - The row to be added to the producer.
+   */
+  private void addRowToRowProducer( RowMetaAndData row ) {
+    LogChannelInterface log = serviceTrans.getLogChannel();
+
+    while ( !rowProducer.putRowWait ( row.getRowMeta(),
+            row.getData(),
+            1,
+            TimeUnit.SECONDS ) && genTrans.isRunning() ) {
+      // Row queue was full, try again
+      if ( log.isRowLevel() ) {
+        log.logRowlevel(ROW_BUFFER_IS_FULL_TRYING_AGAIN);
+      }
+    }
+  }
+
+  /**
+   * Processes a received row from the Service Transformation. If the windowSize is -1 it means that
+   * the buffer is disabled, so the row is directely writen to the genTrans rowProducer. Otherwise, adds the row to the
+   * buffer and activates the genTrans when the buffer has windowSize elements and the genTrans is not taken,
+   * injecting the window records to the rowProducer.
+   *
+   * @param RowMetaAndData row - The row to be processed.
+   */
+  private void processRow( RowMetaAndData row ) {
+    if ( this.windowSize == -1 ) {
+      startGenTrans();
+      addRowToRowProducer( row );
+    } else {
+      this.rowMetaAndData.add( row );
+      if ( this.rowMetaAndData.size() >= this.windowSize && ( !genTransBusy ) ) {
+        writeRowsWindowToProducer( this.rowMetaAndData.subList( 0, this.windowSize - 1 ) );
+      }
+
+      if ( rowMetaAndData.size() > this.windowSize ) {
+        rowMetaAndData.removeAll( this.rowMetaAndData.subList( 0, this.rowMetaAndData.size() - this.windowSize ) );
+      }
+    }
   }
 
   @Override
@@ -63,12 +159,9 @@ class DefaultTransWiringRowAdapter extends RowAdapter {
 
     try {
       Object[] rowData = rowMeta.cloneRow( row );
-      while ( !rowProducer.putRowWait( rowMeta, rowData, 1, TimeUnit.SECONDS ) && genTrans.isRunning() ) {
-        // Row queue was full, try again
-        if ( log.isRowLevel() ) {
-          log.logRowlevel( ROW_BUFFER_IS_FULL_TRYING_AGAIN );
-        }
-      }
+      RowMetaAndData rowMD = new RowMetaAndData( rowMeta, rowData );
+
+      processRow( rowMD );
     } catch ( KettleValueException e ) {
       throw new KettleStepException( e );
     }
