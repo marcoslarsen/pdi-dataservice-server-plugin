@@ -25,19 +25,25 @@ package org.pentaho.di.trans.dataservice.optimization.cache;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
+import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.trans.dataservice.DataServiceExecutor;
 import org.pentaho.di.trans.dataservice.execution.DefaultTransWiring;
+import org.pentaho.di.trans.dataservice.execution.RowProcessor;
 import org.pentaho.di.trans.dataservice.execution.TransStarter;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.trans.RowProducer;
 import org.pentaho.di.trans.Trans;
+import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMetaDataCombi;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -66,6 +72,7 @@ class CachedServiceLoader {
     final Trans serviceTrans = dataServiceExecutor.getServiceTrans(), genTrans = dataServiceExecutor.getGenTrans();
     final CountDownLatch startReplay = new CountDownLatch( 1 );
     final RowProducer rowProducer = dataServiceExecutor.addRowProducer();
+    final StepInterface resultStep = dataServiceExecutor.getGenTrans().findRunThread( dataServiceExecutor.getResultStepName() );
 
     List<Runnable> startTrans = dataServiceExecutor.getListenerMap().get( DataServiceExecutor.ExecutionPoint.START ),
       postOptimization = dataServiceExecutor.getListenerMap().get( DataServiceExecutor.ExecutionPoint.READY );
@@ -100,24 +107,36 @@ class CachedServiceLoader {
       @Override public Integer call() throws Exception {
         Preconditions.checkState( startReplay.await( 30, TimeUnit.SECONDS ), "Cache replay did not start" );
         int rowCount = 0;
+
+        RowProcessor rowProcessor = new RowProcessor( serviceTrans, genTrans, rowProducer, dataServiceExecutor.getResultStepName() );
+        rowProcessor.setWindowSize( 30 );
+
         for ( Iterator<RowMetaAndData> iterator = rowSupplier.get();
-              iterator.hasNext() && genTrans.isRunning(); ) {
+              iterator.hasNext(); ) {
           RowMetaAndData metaAndData = iterator.next();
-          boolean rowAdded = false;
+          // boolean rowAdded = false;
           RowMetaInterface rowMeta = metaAndData.getRowMeta();
           Object[] rowData = rowMeta.cloneRow( metaAndData.getData() );
-          while ( !rowAdded && genTrans.isRunning() ) {
+          RowMetaAndData rowMD = new RowMetaAndData( rowMeta, rowData );
+
+          rowProcessor.processRow( rowMD );
+
+          rowCount += 1;
+
+
+       /*   while ( !rowAdded && genTrans.isRunning() ) {
             rowAdded = rowProducer.putRowWait( rowMeta, rowData, 10, TimeUnit.SECONDS );
           }
           if ( rowAdded ) {
             rowCount += 1;
-          }
+          }*/
         }
-        rowProducer.finished();
+       // rowProducer.finished();
         return rowCount;
       }
     } );
     executor.execute( replay );
     return replay;
   }
+
 }

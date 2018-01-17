@@ -590,7 +590,7 @@ public class DataServiceExecutor {
   }
 
   public boolean isStopped() {
-    return genTrans.isStopped();
+    return serviceTrans.isStopped() && genTrans.isStopped();
   }
 
   /**

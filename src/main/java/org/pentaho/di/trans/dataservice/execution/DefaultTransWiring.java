@@ -47,6 +47,7 @@ public class DefaultTransWiring implements Runnable {
     final RowProducer rowProducer;
     final Trans serviceTrans = dataServiceExecutor.getServiceTrans();
     final Trans genTrans = dataServiceExecutor.getGenTrans();
+    final String resultStepName = dataServiceExecutor.getResultStepName();
 
     try {
       rowProducer = dataServiceExecutor.addRowProducer();
@@ -60,7 +61,7 @@ public class DefaultTransWiring implements Runnable {
     if ( serviceStep == null ) {
       throw Throwables.propagate( new KettleException( "Service step is not accessible" ) );
     }
-    serviceStep.addRowListener( new DefaultTransWiringRowAdapter( serviceTrans, genTrans, rowProducer ) );
+    serviceStep.addRowListener( new DefaultTransWiringRowAdapter( serviceTrans, genTrans, rowProducer, resultStepName ) );
 
     // Let the other transformation know when there are no more rows
     //
