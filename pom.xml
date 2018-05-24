@@ -18,6 +18,7 @@
   <url>http://www.pentaho.com</url>
 
   <modules>
+    <module>apis</module>
     <module>impl</module>
     <module>assemblies</module>
   </modules>
@@ -95,6 +96,11 @@
     <commons.collections.version>3.2.2</commons.collections.version>
     <pentaho-modeler.version>9.0.0.0-SNAPSHOT</pentaho-modeler.version>
     <rxjava.version>2.0.4</rxjava.version>
+    <javax.ws.rs-api.version>2.0</javax.ws.rs-api.version>
+    <fasterxml.jackson.version>2.5.4</fasterxml.jackson.version>
+    <fasterxml.jackson.core.version>2.9.2</fasterxml.jackson.core.version>
+    <atmosphere-version>2.4.20</atmosphere-version>
+    <cxf-rt-transports-websocket-version>3.2.4</cxf-rt-transports-websocket-version>
   </properties>
 
   <dependencyManagement>
@@ -105,6 +111,111 @@
         <version>${pdi.version}</version>
         <scope>provided</scope>
       </dependency>
+
+
+      <dependency>
+        <groupId>javax.ws.rs</groupId>
+        <artifactId>javax.ws.rs-api</artifactId>
+        <version>${javax.ws.rs-api.version}</version>
+        <scope>provided</scope>
+        <exclusions>
+          <exclusion>
+            <artifactId>*</artifactId>
+            <groupId>*</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.cxf</groupId>
+        <artifactId>cxf-rt-transports-websocket</artifactId>
+        <version>${cxf-rt-transports-websocket-version}</version>
+        <scope>provided</scope>
+        <exclusions>
+          <exclusion>
+            <artifactId>*</artifactId>
+            <groupId>*</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.pentaho.det</groupId>
+        <artifactId>data-access-api</artifactId>
+        <version>${project.version}</version>
+        <exclusions>
+          <exclusion>
+            <artifactId>*</artifactId>
+            <groupId>*</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>pentaho</groupId>
+        <artifactId>pdi-dataservice-server-api</artifactId>
+        <version>${project.version}</version>
+        <scope>provided</scope>
+        <exclusions>
+          <exclusion>
+            <artifactId>*</artifactId>
+            <groupId>*</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${fasterxml.jackson.core.version}</version>
+        <exclusions>
+          <exclusion>
+            <artifactId>*</artifactId>
+            <groupId>*</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>${fasterxml.jackson.core.version}</version>
+        <exclusions>
+          <exclusion>
+            <artifactId>*</artifactId>
+            <groupId>*</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${fasterxml.jackson.core.version}</version>
+        <exclusions>
+          <exclusion>
+            <artifactId>*</artifactId>
+            <groupId>*</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.jaxrs</groupId>
+        <artifactId>jackson-jaxrs-json-provider</artifactId>
+        <version>${fasterxml.jackson.version}</version>
+        <exclusions>
+          <exclusion>
+            <artifactId>*</artifactId>
+            <groupId>*</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.jaxrs</groupId>
+        <artifactId>jackson-jaxrs-base</artifactId>
+        <version>${fasterxml.jackson.version}</version>
+        <exclusions>
+          <exclusion>
+            <artifactId>*</artifactId>
+            <groupId>*</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+
       <dependency>
         <groupId>javax.servlet</groupId>
         <artifactId>servlet-api</artifactId>
@@ -227,6 +338,16 @@
         <groupId>io.reactivex.rxjava2</groupId>
         <artifactId>rxjava</artifactId>
         <version>${rxjava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.atmosphere</groupId>
+        <artifactId>atmosphere-runtime</artifactId>
+        <version>${atmosphere-version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.atmosphere</groupId>
+        <artifactId>atmosphere-annotations</artifactId>
+        <version>${atmosphere-version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.code.findbugs</groupId>
